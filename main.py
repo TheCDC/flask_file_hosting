@@ -35,29 +35,31 @@ def hello():
     # handle file upload
     if request.method == "POST":
         # extract file from the request
-        file = request.files["file"]
-        if file.filename == '':
-            # flash('No selected file')
-            return redirect(request.url)
-        else:
-            # choose a filename that can't access system files
-            filename = secure_filename(file.filename)
-            # choose a target path to save it based on the config
-            path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            # connect to the DB
-            connection = sqlite3.connect(app.config["DB_PATH"])
-            c = connection.cursor()
-            # record the file and some metadata
-            # null is for the autoincrement id
-            c.execute("INSERT INTO files VALUES (NULL,?,?)",
-                      (time.strftime("%Y-%m-%d"), path))
-            connection.commit()
-            connection.close()
-            # finally, save the file
-            file.save(path)
-            # redirect the user to the list of files
-            # return redirect(url_for("serve_upload", filename=filename))
-            return redirect(url_for("list_files"))
+        files = request.files.getlist("file[]")
+        for file in files:
+            if file.filename == '':
+                # flash('No selected file')
+                break
+                # return redirect(request.url)
+            else:
+                # choose a filename that can't access system files
+                filename = secure_filename(file.filename)
+                # choose a target path to save it based on the config
+                path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                # connect to the DB
+                connection = sqlite3.connect(app.config["DB_PATH"])
+                c = connection.cursor()
+                # record the file and some metadata
+                # null is for the autoincrement id
+                c.execute("INSERT INTO files VALUES (NULL,?,?)",
+                          (time.strftime("%Y-%m-%d"), path))
+                connection.commit()
+                connection.close()
+                # finally, save the file
+                file.save(path)
+                # redirect the user to the list of files
+                # return redirect(url_for("serve_upload", filename=filename))
+        return redirect(url_for("list_files"))
     else:
         return render_template("upload_form.html")
 
@@ -94,7 +96,11 @@ def delete_upload(filename):
         c.execute('''DELETE FROM files
             WHERE path=?''', (path,))
     # finally delete the actual file
-    os.remove(path)
+    # deletion should be idempotent
+    try:
+        os.remove(path)
+    except FileNotFoundError as e:
+        pass
     # go back to the file list
     return redirect("/list")
 

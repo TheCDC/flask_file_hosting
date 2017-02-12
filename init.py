@@ -9,7 +9,7 @@ def main():
         c.execute(
             "CREATE TABLE files (id INTEGER PRIMARY KEY AUTOINCREMENT, date text, path text)")
     except sqlite3.OperationalError:
-        print("INFO: files db table already exists or there was an error initializing.")
+        print("INFO: DB table already exists. This is fine.")
 
     connection.commit()
     connection.close()
