@@ -39,26 +39,25 @@ def hello():
     if request.method == "POST":
         # extract file from the request
         files = request.files.getlist("file[]")
-        with db_connection() as (_,c):
+        # get db connection
+        with db_connection() as (_, c):
             for file in files:
                 if file.filename == '':
                     # flash('No selected file')
                     break
                     # return redirect(request.url)
                 else:
-                    # choose a filename that can't access system files
+                    # choose a filename that can't wreck system files
                     filename = secure_filename(file.filename)
                     # choose a target path to save it based on the config
                     path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                    # connect to the DB
-                    # record the file and some metadata
+                    # record the file and some metadata,
                     # null is for the autoincrement id
                     c.execute("INSERT INTO files VALUES (NULL,?,?)",
                               (time.strftime("%Y-%m-%d"), path))
                     # finally, save the file
                     file.save(path)
-                    # redirect the user to the list of files
-                    # return redirect(url_for("serve_upload", filename=filename))
+        # redirect the user to the list of files
         return redirect(url_for("list_files"))
     else:
         return render_template("upload_form.html")
@@ -77,7 +76,7 @@ def list_files():
     # manipulate DB query results into HTML table
     rows = []
     for f in files:
-        # lots of string manipulation
+        # lots of string manipulation to produce HTML
         rows.append(
             "<tr>" + ''.join('<td>{0}</td><td><a href="{1}">{2}</a></td><td><a href="/delete/{2}">DELETE</a></td>'.format(f[1], f[2], os.path.basename(f[2]))) + "</tr>")
     return render_template("file_list.html", file_table="<table>{}</table>".format('\n'.join(rows)))
