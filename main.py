@@ -32,33 +32,33 @@ def db_connection():
 
 @app.route("/", methods=["GET", "POST"])
 def hello():
+    """
+    Handle file uploads by POST requests.
+    Handle serving homepage by GET request."""
     # handle file upload
     if request.method == "POST":
         # extract file from the request
         files = request.files.getlist("file[]")
-        for file in files:
-            if file.filename == '':
-                # flash('No selected file')
-                break
-                # return redirect(request.url)
-            else:
-                # choose a filename that can't access system files
-                filename = secure_filename(file.filename)
-                # choose a target path to save it based on the config
-                path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-                # connect to the DB
-                connection = sqlite3.connect(app.config["DB_PATH"])
-                c = connection.cursor()
-                # record the file and some metadata
-                # null is for the autoincrement id
-                c.execute("INSERT INTO files VALUES (NULL,?,?)",
-                          (time.strftime("%Y-%m-%d"), path))
-                connection.commit()
-                connection.close()
-                # finally, save the file
-                file.save(path)
-                # redirect the user to the list of files
-                # return redirect(url_for("serve_upload", filename=filename))
+        with db_connection() as (_,c):
+            for file in files:
+                if file.filename == '':
+                    # flash('No selected file')
+                    break
+                    # return redirect(request.url)
+                else:
+                    # choose a filename that can't access system files
+                    filename = secure_filename(file.filename)
+                    # choose a target path to save it based on the config
+                    path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                    # connect to the DB
+                    # record the file and some metadata
+                    # null is for the autoincrement id
+                    c.execute("INSERT INTO files VALUES (NULL,?,?)",
+                              (time.strftime("%Y-%m-%d"), path))
+                    # finally, save the file
+                    file.save(path)
+                    # redirect the user to the list of files
+                    # return redirect(url_for("serve_upload", filename=filename))
         return redirect(url_for("list_files"))
     else:
         return render_template("upload_form.html")
@@ -66,6 +66,8 @@ def hello():
 
 @app.route("/list")
 def list_files():
+    """
+    Serve the list of all uploaded files."""
     # connect to DB
     with db_connection() as (_, c):
         # select all records
@@ -83,12 +85,18 @@ def list_files():
 
 @app.route("/uploads/<filename>")
 def serve_upload(filename):
+    """
+    Serve file directly by GET
+    """
     # serve the file as a file
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
 @app.route("/delete/<filename>")
 def delete_upload(filename):
+    """
+    Delete local file and reference to file specified by GET request.
+    """
     with db_connection() as (_, c):
         # first get the actual file path of the target filename
         path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
